@@ -5,6 +5,10 @@
 #include <LittleFS.h>
 #include <WiFi.h>
 
+// PIN DEFINE
+uint8_t RELAY[4] = {32, 33, 27, 25};
+
+// NETWORK DEFINE
 #define DNS_PORT 53
 #define SSID "ESP32-UNIVERSAL-ROBOT"
 
@@ -13,9 +17,13 @@ const IPAddress gateway(255, 255, 255, 0);
 
 DNSServer dnsServer;
 AsyncWebServer server(80);
+// AsyncWebSocket ws("/ws");
 
 void setup() {
     Serial.begin(115200);
+
+    // Hardware Setup
+    for (int i = 0; i < 4; i++) pinMode(RELAY[i], OUTPUT);
 
     WiFi.disconnect();    // added to start with the wifi off, avoid crashing
     WiFi.mode(WIFI_OFF);  // added to start with the wifi off, avoid crashing
@@ -33,13 +41,39 @@ void setup() {
         return;
     }
 
+    // HTTP REQUEST
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         Serial.printf("[AP] Serving index.html\n");
 
-        AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/index.html", "text/html");
+        // Load your JSON data
+        DynamicJsonDocument jsonDoc(1024);
+        jsonDoc["key1"] = "value1";
+        jsonDoc["key2"] = 123;
+
+        // Convert the JSON data to a string
+        String jsonData;
+        serializeJson(jsonDoc, jsonData);
+
+        // Combine the JSON data with the HTML template
+        String combinedData = "<script>var jsonData = " + jsonData + ";</script>";
+
+        AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/index.html", "text/html", combinedData);
         response->addHeader("Content-Encoding", "gzip");
         request->send(response);
     });
+
+    // HTTP POST
+    server.on(
+        "/relay", HTTP_POST, [](AsyncWebServerRequest *request) {
+            if (request->hasParam("relayNumber", true)) {
+                uint8_t relayNumber = request->getParam("relayNumber", true)->value().toInt();
+                uint8_t relayState = request->getParam("relayState", true)->value().toInt();
+
+                digitalWrite(RELAY[relayNumber], relayState);
+            }
+
+            request->send(200, "application/json", "{\"type\":\"message\",\"message\":\"OK\"}");
+        });
 
     File root = LittleFS.open("/");
     while (File file = root.openNextFile()) {
