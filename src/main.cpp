@@ -6,7 +6,7 @@
 #include <WiFi.h>
 
 // PIN DEFINE
-uint8_t RELAY[4] = {32, 33, 27, 25};
+uint8_t RELAY[6] = {32, 33, 27, 25, 26, 14};
 
 // NETWORK DEFINE
 #define DNS_PORT 53
@@ -17,7 +17,84 @@ const IPAddress gateway(255, 255, 255, 0);
 
 DNSServer dnsServer;
 AsyncWebServer server(80);
-// AsyncWebSocket ws("/ws");
+AsyncWebSocket websocket("/ws");
+AsyncWebSocketClient *wsClient;
+
+// initial device state
+AsyncWebSocketClient *clients[16];
+
+void wsEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type,
+                    void *arg, uint8_t *data, size_t len) {
+    DynamicJsonDocument json(1024);
+    String ack;
+
+    if (type = WS_EVT_CONNECT) {
+        Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+
+        wsClient = client;
+
+        // send current state
+        json["type"] = "retain";
+        // make array of current state
+        JsonArray data = json.createNestedArray("data");
+        for (int i = 0; i < 6; ++i) data.add(digitalRead(RELAY[i]));
+
+        // for (int i = 0; i < 6; ++i) data.add(digitalRead(RELAY[i]));
+
+        // ACK with current state
+        serializeJson(json, ack);
+        client->text(ack);
+        // store connected client
+        for (int i = 0; i < 16; ++i) {
+            if (clients[i] == NULL) {
+                clients[i] = client;
+                break;
+            }
+        }
+    } else if (type == WS_EVT_DISCONNECT) {
+        Serial.printf("WebSocket client #%u disconnected\n", client->id());
+
+        wsClient = nullptr;
+        // remove client from storage
+        for (int i = 0; i < 16; ++i)
+            if (clients[i] == client) clients[i] = NULL;
+    }
+
+    if (type == WS_EVT_DATA) {
+        if (!deserializeJson(json, (char *)data)) {
+            Serial.printf("WebSocket client #%u sent invalid JSON!\n", client->id());
+            return;
+        }
+
+        Serial.printf("WebSocket client #%u sent: %s\n", client->id(), json["type"].as<char *>());
+        Serial.printf("WebSocket client #%u sent: %s\n", client->id(), json["data"].as<char *>());
+
+        if (json["type"] == "control") {
+            // send ACK to all clients
+            json["type"] = "control";
+            // make array of current state
+            JsonArray data = json.createNestedArray("data");
+            for (int i = 0; i < 6; ++i) {
+                if (json["data"][i] == 0 || json["data"][i] == 1) {
+                    digitalWrite(RELAY[i], json["data"][i]);
+                    data.add(json["data"][i]);
+                } else {
+                    data.add(digitalRead(RELAY[i]));
+                }
+            }
+
+            // ACK with current state
+            serializeJson(json, ack);
+            client->text(ack);
+            for (int i = 0; i < 16; ++i) {
+                if (clients[i] != NULL && clients[i] != client) clients[i]->text(ack);
+            }
+        } else {
+            Serial.printf("WebSocket client #%u sent invalid JSON!\n", client->id());
+            return;
+        }
+    }
+}
 
 void setup() {
     Serial.begin(115200);
@@ -41,39 +118,18 @@ void setup() {
         return;
     }
 
+    // WebSocket
+    websocket.onEvent(wsEventHandler);
+    server.addHandler(&websocket);
+
     // HTTP REQUEST
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         Serial.printf("[AP] Serving index.html\n");
 
-        // Load your JSON data
-        DynamicJsonDocument jsonDoc(1024);
-        jsonDoc["key1"] = "value1";
-        jsonDoc["key2"] = 123;
-
-        // Convert the JSON data to a string
-        String jsonData;
-        serializeJson(jsonDoc, jsonData);
-
-        // Combine the JSON data with the HTML template
-        String combinedData = "<script>var jsonData = " + jsonData + ";</script>";
-
-        AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/index.html", "text/html", combinedData);
+        AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/index.html", "text/html");
         response->addHeader("Content-Encoding", "gzip");
         request->send(response);
     });
-
-    // HTTP POST
-    server.on(
-        "/relay", HTTP_POST, [](AsyncWebServerRequest *request) {
-            if (request->hasParam("relayNumber", true)) {
-                uint8_t relayNumber = request->getParam("relayNumber", true)->value().toInt();
-                uint8_t relayState = request->getParam("relayState", true)->value().toInt();
-
-                digitalWrite(RELAY[relayNumber], relayState);
-            }
-
-            request->send(200, "application/json", "{\"type\":\"message\",\"message\":\"OK\"}");
-        });
 
     File root = LittleFS.open("/");
     while (File file = root.openNextFile()) {
