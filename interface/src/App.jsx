@@ -9,7 +9,7 @@ export default function App() {
 
   const toggleButtonState = index => {
     const states = [...relayState];
-    states[index] = !states[index];
+    states[index] = states[index] ? 0 : 1;
     setRelayState(states);
     const data = {
       type: "control",
@@ -23,8 +23,8 @@ export default function App() {
     websocket.current.onmessage = message => {
       const dataFromServer = JSON.parse(message.data);
       console.log(dataFromServer);
-      if (dataFromServer.type === "retain") {
-        setRelayState(dataFromServer.data);
+      if (dataFromServer.type === "ack") {
+        // setRelayState(dataFromServer.data);
       }
     };
     return () => websocket.current.close();

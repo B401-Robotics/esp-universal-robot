@@ -6,7 +6,7 @@
 #include <WiFi.h>
 
 // PIN DEFINE
-uint8_t RELAY[6] = {32, 33, 27, 25, 26, 14};
+uint8_t RELAY[6] = {16, 17, 18, 19, 21, 22};
 
 // NETWORK DEFINE
 #define DNS_PORT 53
@@ -26,76 +26,72 @@ AsyncWebSocketClient *clients[16];
 void wsEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type,
                     void *arg, uint8_t *data, size_t len) {
     DynamicJsonDocument json(1024);
+    JsonArray dataJson = json.createNestedArray("data");
     String ack;
 
-    if (type = WS_EVT_CONNECT) {
-        Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+    switch (type) {
+        case WS_EVT_CONNECT:
+            Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
 
-        wsClient = client;
+            wsClient = client;
 
-        // send current state
-        json["type"] = "retain";
-        // make array of current state
-        JsonArray data = json.createNestedArray("data");
-        for (int i = 0; i < 6; ++i) data.add(digitalRead(RELAY[i]));
-
-        // for (int i = 0; i < 6; ++i) data.add(digitalRead(RELAY[i]));
-
-        // ACK with current state
-        serializeJson(json, ack);
-        client->text(ack);
-        // store connected client
-        for (int i = 0; i < 16; ++i) {
-            if (clients[i] == NULL) {
-                clients[i] = client;
-                break;
-            }
-        }
-    } else if (type == WS_EVT_DISCONNECT) {
-        Serial.printf("WebSocket client #%u disconnected\n", client->id());
-
-        wsClient = nullptr;
-        // remove client from storage
-        for (int i = 0; i < 16; ++i)
-            if (clients[i] == client) clients[i] = NULL;
-    }
-
-    if (type == WS_EVT_DATA) {
-        if (!deserializeJson(json, (char *)data)) {
-            Serial.printf("WebSocket client #%u sent invalid JSON!\n", client->id());
-            return;
-        }
-
-        Serial.printf("WebSocket client #%u sent: %s\n", client->id(), json["type"].as<char *>());
-        Serial.printf("WebSocket client #%u sent: %s\n", client->id(), json["data"].as<char *>());
-
-        if (json["type"] == "control") {
-            // send ACK to all clients
-            json["type"] = "control";
-            // make array of current state
-            JsonArray data = json.createNestedArray("data");
-            for (int i = 0; i < 6; ++i) {
-                if (json["data"][i] == 0 || json["data"][i] == 1) {
-                    digitalWrite(RELAY[i], json["data"][i]);
-                    data.add(json["data"][i]);
-                } else {
-                    data.add(digitalRead(RELAY[i]));
-                }
-            }
+            // send current state
+            json["type"] = "ack";
+            // send current state as int
+            for (int i = 0; i < 6; i++) dataJson.add(digitalRead(RELAY[i]));
 
             // ACK with current state
             serializeJson(json, ack);
             client->text(ack);
+            // store connected client
             for (int i = 0; i < 16; ++i) {
-                if (clients[i] != NULL && clients[i] != client) clients[i]->text(ack);
+                if (clients[i] == NULL) {
+                    clients[i] = client;
+                    break;
+                }
             }
-        } else {
-            Serial.printf("WebSocket client #%u sent invalid JSON!\n", client->id());
-            return;
-        }
+            break;
+        case WS_EVT_DISCONNECT:
+            Serial.printf("WebSocket client #%u disconnected\n", client->id());
+
+            wsClient = nullptr;
+            // remove client from storage
+            for (int i = 0; i < 16; ++i)
+                if (clients[i] == client) clients[i] = NULL;
+            break;
+        case WS_EVT_DATA:
+            if (deserializeJson(json, (char *)data, len)) {
+                Serial.printf("WebSocket client #%u sent invalid JSON!\n", client->id());
+                return;
+            }
+
+            if (json["type"] == "control") {
+                Serial.printf("WebSocket client #%u sent control JSON!\n", client->id());
+
+                // set relay state
+                for (int i = 0; i < 6; ++i) {
+                    digitalWrite(RELAY[i], json["data"][i]);
+                }
+
+                json["type"] = "ack";
+
+                serializeJson(json, ack);
+                serializeJson(json, Serial);
+                Serial.println();
+                client->text(ack);
+                for (int i = 0; i < 16; ++i) {
+                    if (clients[i] != NULL && clients[i] != client) clients[i]->text(ack);
+                }
+            } else {
+                Serial.printf("WebSocket client #%u sent invalid JSON!\n", client->id());
+                return;
+            }
+
+            break;
+        default:
+            break;
     }
 }
-
 void setup() {
     Serial.begin(115200);
 
