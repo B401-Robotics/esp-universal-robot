@@ -6,7 +6,7 @@
 #include <WiFi.h>
 
 // PIN DEFINE
-uint8_t RELAY[6] = {16, 17, 18, 19, 21, 2};
+uint8_t RELAY[6] = {16, 17, 18, 19, 32, 2};
 
 // NETWORK DEFINE
 #define DNS_PORT 53
