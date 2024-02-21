@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { w3cwebsocket as W3CWebSocket } from "websocket";
 import logo from "./assets/Logo.png";
 
+const buttonName = ["Init", "Start Program", "Freedrive", "Relay 3", "Relay 4", "Relay 5", "Relay 6"];
+
 export default function App() {
   const websocket = useRef(null);
   const [buttonState, setButtonState] = useState([0, 0, 0, 0, 0, 0]);
@@ -14,7 +16,7 @@ export default function App() {
     setButtonState(states);
     const data = {
       type: "control",
-      data: buttonState,
+      data: states,
     };
     websocket.current.send(JSON.stringify(data));
   };
@@ -54,7 +56,7 @@ export default function App() {
                 value={buttonState[index]}
                 onClick={() => toggleButtonState(index)}
                 style={{ WebkitTapHighlightColor: "transparent" }}>
-                <p>{`Relay ${index + 1}`}</p>
+                <p>{`${buttonName[index]}`}</p>
               </button>
             </React.Fragment>
           );

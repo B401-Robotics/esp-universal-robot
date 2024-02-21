@@ -38,19 +38,30 @@ def renameReactAssets( source, target, env ):
         shutil.rmtree(data_dir_path)
     print('Rename: Re-creating an empty data directory ' + data_dir_path)
     os.mkdir(data_dir_path)
-    files_to_copy = ["favicon.ico"]
+    files_to_copy = ["vite.svg"]
     for file in files_to_copy:
         print('Rename: Copying file: ' + file + ' to the data directory' + data_dir_path)
         shutil.copy(data_src_dir_path + "/" + file, data_dir_path)
     replacedNames = ["index.html", "index.html"]
-    with open(data_src_dir_path + "/asset-manifest.json", 'r') as f:
+
+    with open(data_src_dir_path + "/.vite/manifest.json", 'r') as f:
         data = json.load(f)
         # edit files
-        for key in data['files']:
+        for key in data['index.html']:
             if key in replacedNames: continue
-            src_name = data['files'][key]
-            dst_name = sub(r'/([^/]+/)*([^.]+).[^.]+',r'/\2',src_name)
-            replacedNames += (src_name[1:], dst_name[1:])
+            if key == 'isEntry' or key == 'src':
+                continue
+
+            if type(data['index.html'][key]) == list:
+                src_name = data['index.html'][key][0]
+            else:
+                src_name = data['index.html'][key]
+
+            dst_name = sub(r'.*/([^.-]+).*\.(.*)', r'/\1.\2', src_name)
+
+            replacedNames += (src_name, dst_name[1:])
+
+    print("REPALCED NAMES: " + str(replacedNames))
     # move each file in manifest
     for i in range(0, len(replacedNames), 2):
         ext = replacedNames[i].split(".")[-1]

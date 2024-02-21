@@ -1,0 +1,17 @@
+{
+  "index.html": {
+    "file": "assets/index-zbbFpVgx.js",
+    "src": "index.html",
+    "isEntry": true,
+    "css": [
+      "assets/index-4U2_DAsH.css"
+    ],
+    "assets": [
+      "assets/Logo-5YC0ZAKr.png"
+    ]
+  },
+  "src/assets/Logo.png": {
+    "file": "assets/Logo-5YC0ZAKr.png",
+    "src": "src/assets/Logo.png"
+  }
+}

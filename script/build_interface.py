@@ -20,11 +20,11 @@ def flagExists(flag):
 
 def buildWeb():
     os.chdir("interface")
-    print("Building interface with pnpm")
+    print("Building interface with npm")
     try: 
-        env.Execute("pnpm install")
-        env.Execute("pnpm build")
-        buildPath = Path("build")
+        env.Execute("npm install")
+        env.Execute("npm build")
+        buildPath = Path("dist")
         wwwPath = Path("../data/www")
         if wwwPath.exists() and wwwPath.is_dir():
             rmtree(wwwPath)        
