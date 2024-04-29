@@ -11,16 +11,10 @@ This project is a firmware for ESP32 microcontroller connected with Universal Ro
 
 ### Preview
 
-<div style="display: flex; justify-content: center;">
-  <figure style="width: 35%; text-align: center;">
-    <img src="./doc/dark_preview.png" style="width: 100%;" alt="Dark Preview"/>
-    <figcaption>Dark Mode Preview</figcaption>
-  </figure>
-  <figure style="width: 35%; text-align: center;">
-    <img src="./doc/light_preview.png" style="width: 100%;" alt="Light Preview"/>
-    <figcaption>Light Mode Preview</figcaption>
-  </figure>
-</div>
+|            Dark Mode Preview            |            Light Mode Preview             |
+|:---------------------------------------:|:-----------------------------------------:|
+| ![Dark Preview](./doc/dark_preview.png) | ![Light Preview](./doc/light_preview.png) |
+
 
 ## 🚀 Getting Started
 
