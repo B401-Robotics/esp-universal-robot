@@ -8,10 +8,7 @@
 #include "secret.h"
 
 // PIN DEFINE
-uint8_t RELAY[6] = {15, 4, 16, 17, 18, 19};
-
-const IPAddress apIP(192, 168, 2, 1);
-const IPAddress gateway(255, 255, 255, 0);
+uint8_t RELAY[8] = {15, 4, 16, 17, 18, 19, 33, 32};
 
 AsyncWebServer server(80);
 
@@ -19,13 +16,13 @@ void setup() {
     Serial.begin(115200);
 
     // Hardware Setup
-    for (int i = 0; i < 6; i++) pinMode(RELAY[i], OUTPUT);
+    for (int i = 0; i < 8; i++) pinMode(RELAY[i], OUTPUT);
     pinMode(LED_BUILTIN, OUTPUT);
 
     WiFi.mode(WIFI_STA);
-    WiFi.begin(SSID, PASSWORD);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-    Serial.printf("[STA] Connecting to %s\n", SSID);
+    Serial.printf("[STA] Connecting to %s\n", WIFI_SSID);
     while (WiFi.status() != WL_CONNECTED) {
         delay(500);
         Serial.print(".");
@@ -33,7 +30,7 @@ void setup() {
     Serial.println();
     pinMode(LED_BUILTIN, HIGH);
 
-    Serial.printf("Connected to %s\n", SSID);
+    Serial.printf("Connected to %s\n", WIFI_SSID);
     Serial.printf("IP Address: %s\n", WiFi.localIP().toString().c_str());
 
     if (!LittleFS.begin()) {
@@ -84,13 +81,14 @@ void setup() {
     }
 
     // HTTP handlers to control relays
-    for (int i = 0; i < 6; i++) {
-        char endpoint[16];                      // buffer for endpoint string
-        sprintf(endpoint, "/relay/%d", i + 1);  // create endpoint name
+    for (int i = 0; i < 8; i++) {
+        char endpoint[16];                  // buffer for endpoint string
+        sprintf(endpoint, "/relay/%d", i);  // create endpoint name
 
-        server.on(endpoint, HTTP_GET, [i](AsyncWebServerRequest *request) {
-            if (request->hasParam("state")) {
-                String state = request->getParam("state")->value();
+        server.on(endpoint, HTTP_POST, [i](AsyncWebServerRequest *request) {
+            if (request->hasParam("state", true)) {  // true indicates it's in the POST body
+                AsyncWebParameter *param = request->getParam("state", true);
+                String state = param->value();
 
                 if (state == "on") {
                     digitalWrite(RELAY[i], HIGH);  // turn on relay
@@ -104,10 +102,24 @@ void setup() {
             } else {
                 request->send(400, "text/plain", "No 'state' parameter found. Use 'on' or 'off'.");
             }
-
-            Serial.printf("[SERVER] Relay %d state: %s\n", i + 1, request->getParam("state")->value().c_str());
         });
     }
+
+    // Endpoint untuk mendapatkan alamat IP
+    server.on("/ip", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(200, "application/json", "{\"ip\": \"" + WiFi.localIP().toString() + "\"}");
+    });
+
+    // Endpount get status relay
+    server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request) {
+        StaticJsonDocument<200> doc;
+        JsonArray relay = doc.createNestedArray("relay");
+        for (int i = 0; i < 8; i++) relay.add(digitalRead(RELAY[i]));
+
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
 
     server.begin();
     Serial.printf("Web server is now running\n");
