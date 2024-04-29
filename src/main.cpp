@@ -5,122 +5,45 @@
 #include <LittleFS.h>
 #include <WiFi.h>
 
+#include "secret.h"
+
 // PIN DEFINE
 uint8_t RELAY[6] = {15, 4, 16, 17, 18, 19};
-
-// NETWORK DEFINE
-#define DNS_PORT 53
-#define SSID "ESP32-UNIVERSAL-ROBOT"
 
 const IPAddress apIP(192, 168, 2, 1);
 const IPAddress gateway(255, 255, 255, 0);
 
-DNSServer dnsServer;
 AsyncWebServer server(80);
-AsyncWebSocket websocket("/ws");
-AsyncWebSocketClient *wsClient;
 
-// initial device state
-AsyncWebSocketClient *clients[16];
-
-void wsEventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type,
-                    void *arg, uint8_t *data, size_t len) {
-    DynamicJsonDocument json(1024);
-    JsonArray dataJson = json.createNestedArray("data");
-    String ack;
-
-    switch (type) {
-        case WS_EVT_CONNECT:
-            Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
-
-            wsClient = client;
-
-            // send current state
-            json["type"] = "ack";
-            // send current state as int
-            for (int i = 0; i < 6; i++) dataJson.add(digitalRead(RELAY[i]));
-
-            // ACK with current state
-            serializeJson(json, ack);
-            client->text(ack);
-            // store connected client
-            for (int i = 0; i < 16; ++i) {
-                if (clients[i] == NULL) {
-                    clients[i] = client;
-                    break;
-                }
-            }
-            break;
-        case WS_EVT_DISCONNECT:
-            Serial.printf("WebSocket client #%u disconnected\n", client->id());
-
-            wsClient = nullptr;
-            // remove client from storage
-            for (int i = 0; i < 16; ++i)
-                if (clients[i] == client) clients[i] = NULL;
-            break;
-        case WS_EVT_DATA:
-            if (deserializeJson(json, (char *)data, len)) {
-                Serial.printf("WebSocket client #%u sent invalid JSON!\n", client->id());
-                return;
-            }
-
-            if (json["type"] == "control") {
-                Serial.printf("WebSocket client #%u sent control JSON!\n", client->id());
-
-                // set relay state
-                for (int i = 0; i < 6; ++i) {
-                    digitalWrite(RELAY[i], json["data"][i]);
-                }
-
-                json["type"] = "ack";
-
-                serializeJson(json, ack);
-                serializeJson(json, Serial);
-                Serial.println();
-                client->text(ack);
-                for (int i = 0; i < 16; ++i) {
-                    if (clients[i] != NULL && clients[i] != client) clients[i]->text(ack);
-                }
-            } else {
-                Serial.printf("WebSocket client #%u sent invalid JSON!\n", client->id());
-                return;
-            }
-
-            break;
-        default:
-            break;
-    }
-}
 void setup() {
     Serial.begin(115200);
 
     // Hardware Setup
-    for (int i = 0; i < 4; i++) pinMode(RELAY[i], OUTPUT);
+    for (int i = 0; i < 6; i++) pinMode(RELAY[i], OUTPUT);
+    pinMode(LED_BUILTIN, OUTPUT);
 
-    WiFi.disconnect();    // added to start with the wifi off, avoid crashing
-    WiFi.mode(WIFI_OFF);  // added to start with the wifi off, avoid crashing
-    WiFi.mode(WIFI_AP);
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(SSID, PASSWORD);
 
-    WiFi.softAP(SSID);
+    Serial.printf("[STA] Connecting to %s\n", SSID);
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+    Serial.println();
+    pinMode(LED_BUILTIN, HIGH);
 
-    WiFi.softAPConfig(apIP, apIP, gateway);
-    dnsServer.start(DNS_PORT, "*", apIP);
-    Serial.printf("[AP] WiFi AP is now running\n");
-    Serial.printf("[AP] IP address: %s\n", WiFi.softAPIP().toString().c_str());
+    Serial.printf("Connected to %s\n", SSID);
+    Serial.printf("IP Address: %s\n", WiFi.localIP().toString().c_str());
 
     if (!LittleFS.begin()) {
-        Serial.printf("[AP] An Error has occurred while mounting LittleFS\n");
+        Serial.printf("[SERVER] An Error has occurred while mounting LittleFS\n");
         return;
     }
 
-    // WebSocket
-    websocket.onEvent(wsEventHandler);
-    server.addHandler(&websocket);
-
     // HTTP REQUEST
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        Serial.printf("[AP] Serving index.html\n");
+        Serial.printf("[SERVER] Serving index.html\n");
 
         AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/index.html", "text/html");
         response->addHeader("Content-Encoding", "gzip");
@@ -131,7 +54,7 @@ void setup() {
     while (File file = root.openNextFile()) {
         String filename = "/" + String(file.name());
         server.on(filename.c_str(), HTTP_GET, [filename](AsyncWebServerRequest *request) {
-            Serial.printf("[AP] Serving %s\n", filename.c_str());
+            Serial.printf("[SERVER] Serving %s\n", filename.c_str());
 
             String contentType = filename.substring(filename.length() - 3);
             if (contentType == "tml" || contentType == "htm")
@@ -160,14 +83,36 @@ void setup() {
         });
     }
 
-    // Captive portal to keep the client
-    server.on("*", HTTP_GET, [](AsyncWebServerRequest *request) { request->redirect("http://" + apIP.toString()); });
-    server.begin();
+    // HTTP handlers to control relays
+    for (int i = 0; i < 6; i++) {
+        char endpoint[16];                      // buffer for endpoint string
+        sprintf(endpoint, "/relay/%d", i + 1);  // create endpoint name
 
-    Serial.printf("[AP] Webserver is now running\n");
+        server.on(endpoint, HTTP_GET, [i](AsyncWebServerRequest *request) {
+            if (request->hasParam("state")) {
+                String state = request->getParam("state")->value();
+
+                if (state == "on") {
+                    digitalWrite(RELAY[i], HIGH);  // turn on relay
+                    request->send(200, "text/plain", "Relay " + String(i + 1) + " is ON");
+                } else if (state == "off") {
+                    digitalWrite(RELAY[i], LOW);  // turn off relay
+                    request->send(200, "text/plain", "Relay " + String(i + 1) + " is OFF");
+                } else {
+                    request->send(400, "text/plain", "Invalid state. Use 'on' or 'off'.");
+                }
+            } else {
+                request->send(400, "text/plain", "No 'state' parameter found. Use 'on' or 'off'.");
+            }
+
+            Serial.printf("[SERVER] Relay %d state: %s\n", i + 1, request->getParam("state")->value().c_str());
+        });
+    }
+
+    server.begin();
+    Serial.printf("Web server is now running\n");
 }
 
 void loop() {
-    dnsServer.processNextRequest();
     delay(1000);
 }

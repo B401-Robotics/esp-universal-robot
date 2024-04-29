@@ -1,17 +1,11 @@
 {
   "index.html": {
-    "file": "assets/index-zbbFpVgx.js",
+    "file": "assets/index-BmrS6Kg6.js",
+    "name": "index",
     "src": "index.html",
     "isEntry": true,
     "css": [
-      "assets/index-4U2_DAsH.css"
-    ],
-    "assets": [
-      "assets/Logo-5YC0ZAKr.png"
+      "assets/index-Dr_SkOGk.css"
     ]
-  },
-  "src/assets/Logo.png": {
-    "file": "assets/Logo-5YC0ZAKr.png",
-    "src": "src/assets/Logo.png"
   }
 }

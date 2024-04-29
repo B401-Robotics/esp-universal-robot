@@ -49,7 +49,7 @@ def renameReactAssets( source, target, env ):
         # edit files
         for key in data['index.html']:
             if key in replacedNames: continue
-            if key == 'isEntry' or key == 'src':
+            if key == 'isEntry' or key == 'src' or key == 'name':
                 continue
 
             if type(data['index.html'][key]) == list:
