@@ -5,7 +5,7 @@ This project is a firmware for ESP32 microcontroller connected with Universal Ro
 ## 🌟 Features
 
 - Firmware built with Arduino and PlatformIO
-- Interface built with React and [Shadcn](https://ui.shadcn.com/)
+- Web Page built with React and [Shadcn](https://ui.shadcn.com/)
 - Web Page attached to ESP32
 - API for controlling the relays
 
@@ -56,9 +56,5 @@ This project is a firmware for ESP32 microcontroller connected with Universal Ro
 - `GET /ip` - Get the IP address of the ESP32
 - `GET /status` - Get the status all of the relays
 - `POST /relay/:id` - Set the state of the relay with the specified ID
-
-  ```json
-  {
-    "state": 0
-  }
-  ```
+    - Content-Type: application/x-www-form-urlencoded
+    - Body: `state` (0 or 1)
