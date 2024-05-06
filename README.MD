@@ -1,12 +1,17 @@
-# ESP32 Universal Robot
+<h1 align="center">ESP32 Universal Robot</h1>
 
-This project is a firmware for ESP32 microcontroller connected with Universal Robot UR5 with 8 Channel Relay as an input.
+<p align="center">
+	<img src="https://img.shields.io/github/stars/b401-robotics/esp-universal-robot?colorA=363a4f&colorB=b7bdf8&style=for-the-badge"></a>
+	<img src="https://img.shields.io/github/repo-size/b401-robotics/esp-universal-robot?colorA=363a4f&colorB=f5a97f&style=for-the-badge"></a>
+	<img src="https://img.shields.io/github/contributors/b401-robotics/esp-universal-robot?colorA=363a4f&colorB=a6da95&style=for-the-badge"></a>
+</p>
+
+This project involves firmware for an ESP32 connected to an 8-channel relay module. The relay module is utilized to control a Universal Robot as a digital input.
 
 ## 🌟 Features
 
 - Firmware built with Arduino and PlatformIO
-- Web Page built with React and [Shadcn](https://ui.shadcn.com/)
-- Web Page attached to ESP32
+- Web Application built with React and attached to ESP32
 - API for controlling the relays
 
 ### Preview
@@ -47,7 +52,7 @@ This project is a firmware for ESP32 microcontroller connected with Universal Ro
    ```sh
    pio run -t uploadfs
    ```
-   Notes: Dependecies for web interface are installed automatically by PlatformIO when you build filesytem image. For more information about script, check `script` folder.
+   > Dependecies for web interface are installed automatically by PlatformIO when you build filesytem image. For more information about script, check `script` folder.
 
 ## 📝 Documentation
 
