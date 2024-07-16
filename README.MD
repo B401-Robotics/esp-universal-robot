@@ -62,4 +62,4 @@ This project involves firmware for an ESP32 connected to an 8-channel relay modu
 - `GET /status` - Get the status all of the relays
 - `POST /relay/:id` - Set the state of the relay with the specified ID
     - Content-Type: application/x-www-form-urlencoded
-    - Body: `state` (0 or 1)
+    - Body: `state` ("on" or "off")
