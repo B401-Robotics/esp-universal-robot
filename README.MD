@@ -63,3 +63,9 @@ This project involves firmware for an ESP32 connected to an 8-channel relay modu
 - `POST /relay/:id` - Set the state of the relay with the specified ID
     - Content-Type: application/x-www-form-urlencoded
     - Body: `state` ("on" or "off")
+- `POST /relay/all` - Set state of all relays at once
+    - Content-Type: application/x-www-form-urlencoded
+    - Bodu: `states` ["on", "off", "on", "off", "on", "off", "on", "off"] --> just example
+
+## ✅ To-Do
+- Fix indexing mistake between the UI and the actual relay id

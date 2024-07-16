@@ -121,6 +121,44 @@ void setup() {
         request->send(200, "application/json", response);
     });
 
+    // Tambahan Endpoint untuk mengatur relay dgn sekali HTTP_POST sekaligus
+    server.on("/relay/all", HTTP_POST, [](AsyncWebServerRequest *request) {
+        if (request->hasParam("states", true)) {  // Check if the parameter "states" exists
+            AsyncWebParameter* param = request->getParam("states", true);
+            String states = param->value();
+
+            StaticJsonDocument<200> doc;
+            DeserializationError error = deserializeJson(doc, states);
+
+            if (error) {
+                request->send(400, "text/plain", "Invalid JSON");
+                return;
+            }
+
+            JsonArray relayStates = doc.as<JsonArray>();
+            if (relayStates.size() != 8) {
+                request->send(400, "text/plain", "Invalid array size. Must be 8.");
+                return;
+            }
+
+            for (int i = 0; i < 8; i++) {
+                String state = relayStates[i];
+                if (state == "on") {
+                    digitalWrite(RELAY[i], HIGH);  // turn on relay
+                } else if (state == "off") {
+                    digitalWrite(RELAY[i], LOW);  // turn off relay
+                } else {
+                    request->send(400, "text/plain", "Invalid state. Use 'on' or 'off'.");
+                    return;
+                }
+            }
+
+            request->send(200, "text/plain", "Relays updated successfully");
+        } else {
+            request->send(400, "text/plain", "No 'states' parameter found. Use an array of 'on' or 'off'.");
+        }
+    });
+
     server.begin();
     Serial.printf("Web server is now running\n");
 }
