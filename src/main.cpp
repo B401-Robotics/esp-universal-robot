@@ -5,7 +5,7 @@
 #include <LittleFS.h>
 #include <WiFi.h>
 
-#include "secrets.h"
+#include "secret.h"
 
 // PIN DEFINE
 uint8_t RELAY[8] = {15, 4, 16, 17, 18, 19, 33, 32};

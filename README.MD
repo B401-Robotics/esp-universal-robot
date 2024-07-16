@@ -35,7 +35,7 @@ This project involves firmware for an ESP32 connected to an 8-channel relay modu
    git clone
     ```
 
-2. Create a new file named `secrets.h` in the `src` folder and add the following code:
+2. Create a new file named `secret.h` in the `src` folder and add the following code:
    ```cpp
     #pragma once
 
