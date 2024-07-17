@@ -105,22 +105,6 @@ void setup() {
         });
     }
 
-    // Endpoint untuk mendapatkan alamat IP
-    server.on("/ip", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(200, "application/json", "{\"ip\": \"" + WiFi.localIP().toString() + "\"}");
-    });
-
-    // Endpount get status relay
-    server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request) {
-        StaticJsonDocument<200> doc;
-        JsonArray relay = doc.createNestedArray("relay");
-        for (int i = 0; i < 8; i++) relay.add(digitalRead(RELAY[i]));
-
-        String response;
-        serializeJson(doc, response);
-        request->send(200, "application/json", response);
-    });
-
     // Tambahan Endpoint untuk mengatur relay dgn sekali HTTP_POST sekaligus
     server.on("/relay/all", HTTP_POST, [](AsyncWebServerRequest *request) {
         if (request->hasParam("states", true)) {  // Check if the parameter "states" exists
@@ -148,15 +132,31 @@ void setup() {
                 } else if (state == "off") {
                     digitalWrite(RELAY[i], LOW);  // turn off relay
                 } else {
-                    request->send(400, "text/plain", "Invalid state. Use 'on' or 'off'.");
+                    request->send(400, "text/plain", "Something wrong inside the array.");
                     return;
                 }
             }
 
             request->send(200, "text/plain", "Relays updated successfully");
         } else {
-            request->send(400, "text/plain", "No 'states' parameter found. Use an array of 'on' or 'off'.");
+            request->send(400, "text/plain", "No 'states' parameter found.");
         }
+    });
+
+    // Endpoint untuk mendapatkan alamat IP
+    server.on("/ip", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(200, "application/json", "{\"ip\": \"" + WiFi.localIP().toString() + "\"}");
+    });
+
+    // Endpount get status relay
+    server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request) {
+        StaticJsonDocument<200> doc;
+        JsonArray relay = doc.createNestedArray("relay");
+        for (int i = 0; i < 8; i++) relay.add(digitalRead(RELAY[i]));
+
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
     });
 
     server.begin();
