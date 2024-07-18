@@ -8,7 +8,7 @@
 #include "secret.h"
 
 // PIN DEFINE
-uint8_t RELAY[8] = {15, 4, 16, 17, 18, 19, 33, 32};
+uint8_t RELAY[8] = {15, 4, 16, 17, 18, 19, 21, 22};
 
 AsyncWebServer server(80);
 
