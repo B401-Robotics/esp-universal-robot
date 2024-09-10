@@ -69,3 +69,4 @@ This project involves firmware for an ESP32 connected to an 8-channel relay modu
 
 ## ✅ To-Do
 - Fix indexing mistake between the UI and the actual relay id
+- Make it using websocket, so the page doesn't need to be refreshed to display real-time relay condition
